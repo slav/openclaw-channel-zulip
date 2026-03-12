@@ -25,6 +25,7 @@ export async function probeZulip(
     const authHeader = Buffer.from(`${email}:${apiKey}`).toString("base64");
     const { response: res, release } = await fetchWithSsrFGuard({
       url: `${normalized}/api/v1/users/me`,
+      policy: { allowPrivateNetwork: true },
       init: {
         headers: {
           Authorization: `Basic ${authHeader}`,

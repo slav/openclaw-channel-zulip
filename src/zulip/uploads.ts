@@ -71,6 +71,7 @@ export async function downloadZulipUpload(
   }
   const { response: res, release } = await fetchWithSsrFGuard({
     url,
+    policy: { allowPrivateNetwork: true },
     init: {
       headers: {
         Authorization: `Basic ${authHeader}`,
