@@ -167,6 +167,46 @@ function sanitizeThreadId(threadId: string): string {
   return sanitized;
 }
 
+/**
+ * Normalize a stream name/id for comparison (trim + lowercase).
+ */
+function normalizeStreamKey(value: string | undefined | null): string {
+  return (value ?? "").trim().toLowerCase();
+}
+
+/**
+ * Check whether a message belongs to a monitored stream.
+ *
+ * - Empty/null monitoredStreams → allow all (backward-compatible default).
+ * - ["*"] → allow all.
+ * - Otherwise match by stream name (case-insensitive) or numeric stream id.
+ *
+ * Client-side counterpart to queue registration: when monitoring multiple
+ * streams the Zulip event queue uses all_public_streams=true (narrows are
+ * ANDed), so this enforces the per-account stream allowlist.
+ */
+export function isMonitoredStream(params: {
+  monitoredStreams?: string[] | null;
+  streamName?: string | null;
+  streamId?: string | null;
+}): boolean {
+  const monitored = params.monitoredStreams ?? [];
+  if (monitored.length === 0) return true;
+
+  const normalized = new Set(
+    monitored.map((entry) => normalizeStreamKey(entry)).filter(Boolean),
+  );
+  if (normalized.has("*")) return true;
+
+  const streamName = normalizeStreamKey(params.streamName);
+  if (streamName && normalized.has(streamName)) return true;
+
+  const streamId = (params.streamId ?? "").trim();
+  if (streamId && monitored.includes(streamId)) return true;
+
+  return false;
+}
+
 export function resolveThreadSessionKeys(params: {
   baseSessionKey: string;
   threadId?: string | null;

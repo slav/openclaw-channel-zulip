@@ -42,6 +42,7 @@ import {
 import {
   createDedupeCache,
   formatInboundFromLabel,
+  isMonitoredStream,
   resolveThreadSessionKeys,
 } from "./monitor-helpers.js";
 import { sendMessageZulip } from "./send.js";
@@ -249,6 +250,20 @@ export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise
   const defaultTopic = account.config.defaultTopic?.trim() ?? FALLBACK_TOPIC;
   const oncharPrefixes = resolveOncharPrefixes(account.oncharPrefixes);
   const oncharEnabled = account.chatmode === "onchar";
+
+  // Client-side stream allowlist — needed because multi-stream queue
+  // registration uses all_public_streams=true (Zulip narrows are ANDed).
+  const monitoredStreams = account.streams ?? ["*"];
+  const streamNameCache = new Map<string, string>();
+  const resolveStreamName = async (id: string): Promise<string> => {
+    const cached = streamNameCache.get(id);
+    if (cached) return cached;
+    const info = await fetchZulipStream(client, id);
+    const name = info.name ?? "";
+    streamNameCache.set(id, name);
+    return name;
+  };
+
   const channelHistories = new Map<string, HistoryEntry[]>();
 
   const mediaMaxBytes =
@@ -313,6 +328,18 @@ export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise
       channelId = streamId;
       if (typeof message.display_recipient === "string") {
         streamName = message.display_recipient;
+      }
+      // Resolve stream name via API when display_recipient is missing
+      if (!streamName && streamId) {
+        try {
+          streamName = await resolveStreamName(streamId);
+        } catch {
+          // Best-effort — id-based matching may still work
+        }
+      }
+      // Enforce per-account stream allowlist (client-side filtering)
+      if (!isMonitoredStream({ monitoredStreams, streamName, streamId })) {
+        return;
       }
       topic = message.subject?.trim() || defaultTopic;
     }
