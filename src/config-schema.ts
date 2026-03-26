@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+/**
+ * Validates the persisted Zulip channel config, both for the top-level account and
+ * for any entries under channels.zulip.accounts.
+ */
 const MarkdownConfigSchema = z
   .object({
     tables: z.enum(["off", "bullets", "code"]).optional(),
@@ -16,6 +20,7 @@ const BlockStreamingCoalesceSchema = z
   })
   .strict();
 
+/** Enforces that an explicitly open DM policy also carries an explicit wildcard allowlist. */
 function requireOpenAllowFrom(params: {
   policy: z.infer<typeof DmPolicySchema> | undefined;
   allowFrom: Array<string | number> | undefined;
@@ -36,6 +41,7 @@ function requireOpenAllowFrom(params: {
   }
 }
 
+/** Shared shape for a single resolved Zulip account configuration. */
 const ZulipAccountSchemaBase = z
   .object({
     name: z.string().optional(),
@@ -86,6 +92,7 @@ const ZulipAccountSchema = ZulipAccountSchemaBase.superRefine((value, ctx) => {
   });
 });
 
+/** Full channel config, including optional multi-account configuration. */
 export const ZulipConfigSchema = ZulipAccountSchemaBase.extend({
   accounts: z.record(z.string(), ZulipAccountSchema.optional()).optional(),
   defaultAccount: z.string().optional(),

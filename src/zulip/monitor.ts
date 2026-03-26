@@ -72,6 +72,7 @@ const recentInboundMessages = createDedupeCache({
   maxSize: RECENT_MESSAGE_MAX,
 });
 
+/** Supplies the runtime callbacks used by the long-lived monitor loop, defaulting to console behavior in tests. */
 function resolveRuntime(opts: MonitorZulipOpts): RuntimeEnv {
   return (
     opts.runtime ?? {
@@ -84,6 +85,7 @@ function resolveRuntime(opts: MonitorZulipOpts): RuntimeEnv {
   );
 }
 
+/** Converts Zulip-rendered HTML into plain text suitable for routing into the agent. */
 function stripHtmlToText(html: string): string {
   return html
     .replace(/<[^>]+>/g, "")
@@ -109,6 +111,7 @@ function resolveOncharPrefixes(prefixes: string[] | undefined): string[] {
   return cleaned.length > 0 ? cleaned : DEFAULT_ONCHAR_PREFIXES;
 }
 
+/** Detects and removes an on-char trigger prefix while leaving normal messages untouched. */
 function stripOncharPrefix(
   text: string,
   prefixes: string[],
@@ -182,6 +185,7 @@ function isSenderAllowed(params: {
   );
 }
 
+/** Persists inbound media to OpenClaw-managed storage so the agent can consume it safely. */
 async function saveZulipMediaBuffer(params: {
   core: ReturnType<typeof getZulipRuntime>;
   buffer: Buffer;
@@ -213,6 +217,7 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** Runs the long-lived Zulip event loop for a single account and forwards eligible events into OpenClaw sessions. */
 export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise<void> {
   const core = getZulipRuntime();
   const cfg = opts.config ?? core.config.loadConfig();

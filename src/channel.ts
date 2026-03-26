@@ -41,6 +41,7 @@ const meta = {
   quickstartAllowFrom: true,
 } as const;
 
+/** Normalizes a sender identifier into the lowercase form stored in Zulip allowlists. */
 function normalizeAllowEntry(entry: string): string {
   return entry
     .trim()
@@ -49,6 +50,7 @@ function normalizeAllowEntry(entry: string): string {
     .toLowerCase();
 }
 
+/** Formats stored allowlist values back into a friendlier display form for status and setup flows. */
 function formatAllowEntry(entry: string): string {
   const trimmed = entry.trim();
   if (!trimmed) {
@@ -61,6 +63,7 @@ function formatAllowEntry(entry: string): string {
   return trimmed.replace(/^(zulip|user):/i, "").toLowerCase();
 }
 
+/** Registers the Zulip channel with account config, security policy, outbound delivery, and gateway startup hooks. */
 export const zulipPlugin: ChannelPlugin<ResolvedZulipAccount> = {
   id: "zulip",
   meta: {
