@@ -4,6 +4,7 @@ import type {
 } from "openclaw/plugin-sdk/channel-contract";
 import type { OpenClawConfig } from "openclaw/plugin-sdk/core";
 import { readNumberParam, readStringParam } from "openclaw/plugin-sdk/param-readers";
+import { jsonResult } from "openclaw/plugin-sdk/telegram-core";
 import { resolveZulipAccount } from "./zulip/accounts.js";
 import {
   addZulipReaction,
@@ -34,9 +35,6 @@ import {
   updateZulipStream,
 } from "./zulip/client.js";
 
-function jsonResult(value: unknown) {
-  return { contentType: "application/json", value };
-}
 
 const providerId = "zulip";
 const MAX_STRING_LENGTH = 10000;
@@ -398,12 +396,12 @@ function readRealmUpdateParams(
 }
 
 export const zulipMessageActions: ChannelMessageActionAdapter = {
-  listActions: ({ cfg }) => {
+  describeMessageTool: ({ cfg }: { cfg: OpenClawConfig }) => {
     const accounts = [resolveZulipAccount({ cfg })].filter((account) =>
       Boolean(account.apiKey && account.email && account.baseUrl),
     );
     if (accounts.length === 0) {
-      return [];
+      return null;
     }
     const actions = new Set<ChannelMessageActionName>([
       "send",
@@ -420,18 +418,7 @@ export const zulipMessageActions: ChannelMessageActionAdapter = {
       "pin",
       "unpin",
     ]);
-    // TODO: These actions require core SDK changes to MESSAGE_ACTION_TARGET_MODE.
-    // Re-enable once the SDK supports plugin-registered action target modes.
-    // See: https://github.com/openclaw/openclaw/issues/TBD
-    // actions.add("channel-subscribe" as ChannelMessageActionName);
-    // actions.add("invite" as ChannelMessageActionName);
-    // actions.add("resolve-topic" as ChannelMessageActionName);
-    // actions.add("user-presence" as ChannelMessageActionName);
-    // actions.add("user-deactivate" as ChannelMessageActionName);
-    // actions.add("user-reactivate" as ChannelMessageActionName);
-    // actions.add("org-settings" as ChannelMessageActionName);
-    // actions.add("org-settings-edit" as ChannelMessageActionName);
-    return Array.from(actions);
+    return { actions: Array.from(actions) };
   },
   extractToolSend: ({ args }) => {
     const action = typeof args.action === "string" ? args.action.trim() : "";

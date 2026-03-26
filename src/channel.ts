@@ -15,7 +15,6 @@ import { zulipMessageActions } from "./actions.js";
 import { ZulipConfigSchema } from "./config-schema.js";
 import { resolveZulipGroupRequireMention } from "./group-mentions.js";
 import { looksLikeZulipTargetId, normalizeZulipMessagingTarget } from "./normalize.js";
-import { zulipOnboardingAdapter } from "./onboarding.js";
 import { getZulipRuntime } from "./runtime.js";
 import type { ZulipAccountConfig, ZulipConfig } from "./types.js";
 import {
@@ -67,7 +66,6 @@ export const zulipPlugin: ChannelPlugin<ResolvedZulipAccount> = {
   meta: {
     ...meta,
   },
-  onboarding: zulipOnboardingAdapter,
   pairing: {
     idLabel: "zulipUserId",
     normalizeAllowEntry: (entry) => normalizeAllowEntry(entry),
