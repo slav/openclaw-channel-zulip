@@ -1,28 +1,30 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import type {
-  ChannelAccountSnapshot,
-  OpenClawConfig,
-  ReplyPayload,
-  RuntimeEnv,
-} from "openclaw/plugin-sdk";
+import type { OpenClawConfig } from "openclaw/plugin-sdk/core";
+import type { ChannelAccountSnapshot } from "openclaw/plugin-sdk/channel-contract";
+import type { ReplyPayload } from "openclaw/plugin-sdk/reply-runtime";
+import type { RuntimeEnv } from "openclaw/plugin-sdk/runtime-env";
+import type { HistoryEntry } from "openclaw/plugin-sdk/reply-history";
 import {
-  createReplyPrefixOptions,
-  createScopedPairingAccess,
-  createTypingCallbacks,
-  logInboundDrop,
-  logTypingFailure,
   buildPendingHistoryContextFromMap,
   clearHistoryEntriesIfEnabled,
   DEFAULT_GROUP_HISTORY_LIMIT,
   recordPendingHistoryEntryIfEnabled,
-  resolveControlCommandGate,
-  resolveChannelMediaMaxBytes,
-  resolvePreferredOpenClawTmpDir,
+} from "openclaw/plugin-sdk/reply-history";
+import {
+  createReplyPrefixOptions,
+  createTypingCallbacks,
+} from "openclaw/plugin-sdk/channel-runtime";
+import { logInboundDrop } from "openclaw/plugin-sdk/channel-inbound";
+import { logTypingFailure } from "openclaw/plugin-sdk/channel-feedback";
+import { resolveControlCommandGate } from "openclaw/plugin-sdk/command-auth";
+import {
   readStoreAllowFromForDmPolicy,
   resolveDmGroupAccessWithLists,
-  type HistoryEntry,
-} from "openclaw/plugin-sdk";
+} from "openclaw/plugin-sdk/channel-policy";
+import { createChannelPairingController } from "openclaw/plugin-sdk/channel-pairing";
+import { resolveChannelMediaMaxBytes } from "openclaw/plugin-sdk/media-runtime";
+import { resolvePreferredOpenClawTmpDir } from "openclaw/plugin-sdk/infra-runtime";
 import { getZulipRuntime } from "../runtime.js";
 import { resolveZulipAccount } from "./accounts.js";
 import {
@@ -287,7 +289,7 @@ export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise
   const reactionSuccess = normalizeZulipEmojiName(reactionConfig.onSuccess ?? "check_mark");
   const reactionError = normalizeZulipEmojiName(reactionConfig.onError ?? "warning");
 
-  const pairing = createScopedPairingAccess({
+  const pairing = createChannelPairingController({
     core,
     channel: "zulip",
     accountId: account.accountId,

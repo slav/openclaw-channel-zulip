@@ -1,11 +1,40 @@
-import {
-  BlockStreamingCoalesceSchema,
-  DmPolicySchema,
-  GroupPolicySchema,
-  MarkdownConfigSchema,
-  requireOpenAllowFrom,
-} from "openclaw/plugin-sdk";
 import { z } from "zod";
+
+const MarkdownConfigSchema = z
+  .object({
+    tables: z.enum(["off", "bullets", "code"]).optional(),
+  })
+  .strict();
+
+const DmPolicySchema = z.enum(["pairing", "allowlist", "open", "disabled"]);
+const GroupPolicySchema = z.enum(["open", "disabled", "allowlist"]);
+const BlockStreamingCoalesceSchema = z
+  .object({
+    minChars: z.number().int().positive().optional(),
+    maxChars: z.number().int().positive().optional(),
+    idleMs: z.number().int().positive().optional(),
+  })
+  .strict();
+
+function requireOpenAllowFrom(params: {
+  policy: z.infer<typeof DmPolicySchema> | undefined;
+  allowFrom: Array<string | number> | undefined;
+  ctx: z.RefinementCtx;
+  path: (string | number)[];
+  message: string;
+}): void {
+  if (params.policy !== "open") {
+    return;
+  }
+  const hasWildcard = (params.allowFrom ?? []).some((entry) => String(entry).trim() === "*");
+  if (!hasWildcard) {
+    params.ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: params.path,
+      message: params.message,
+    });
+  }
+}
 
 const ZulipAccountSchemaBase = z
   .object({

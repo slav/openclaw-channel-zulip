@@ -1,9 +1,9 @@
 import type {
   ChannelMessageActionAdapter,
   ChannelMessageActionName,
-  OpenClawConfig,
-} from "openclaw/plugin-sdk";
-import { jsonResult, readNumberParam, readStringParam } from "openclaw/plugin-sdk";
+} from "openclaw/plugin-sdk/channel-contract";
+import type { OpenClawConfig } from "openclaw/plugin-sdk/core";
+import { readNumberParam, readStringParam } from "openclaw/plugin-sdk/param-readers";
 import { resolveZulipAccount } from "./zulip/accounts.js";
 import {
   addZulipReaction,
@@ -33,6 +33,10 @@ import {
   updateZulipRealm,
   updateZulipStream,
 } from "./zulip/client.js";
+
+function jsonResult(value: unknown) {
+  return { contentType: "application/json", value };
+}
 
 const providerId = "zulip";
 const MAX_STRING_LENGTH = 10000;
