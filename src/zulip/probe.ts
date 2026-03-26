@@ -1,4 +1,4 @@
-import { fetchWithSsrFGuard } from "openclaw/plugin-sdk";
+import { fetchWithSsrFGuard } from "openclaw/plugin-sdk/infra-runtime";
 import { normalizeZulipBaseUrl, readZulipError, type ZulipUser } from "./client.js";
 
 export type ZulipProbe = {

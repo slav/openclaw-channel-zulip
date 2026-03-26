@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { resolvePreferredOpenClawTmpDir } from "openclaw/plugin-sdk";
+import { resolvePreferredOpenClawTmpDir } from "openclaw/plugin-sdk/infra-runtime";
 
 const INBOUND_TTL_MS = 30 * 60 * 1000; // 30 minutes
 const SWEEP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes

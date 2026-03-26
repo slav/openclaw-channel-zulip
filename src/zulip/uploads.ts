@@ -1,5 +1,5 @@
 import path from "node:path";
-import { fetchWithSsrFGuard } from "openclaw/plugin-sdk";
+import { fetchWithSsrFGuard } from "openclaw/plugin-sdk/infra-runtime";
 
 export function normalizeZulipEmojiName(raw?: string | null): string {
   const trimmed = raw?.trim() ?? "";

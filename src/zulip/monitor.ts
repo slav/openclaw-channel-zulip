@@ -1,28 +1,30 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import type {
-  ChannelAccountSnapshot,
-  OpenClawConfig,
-  ReplyPayload,
-  RuntimeEnv,
-} from "openclaw/plugin-sdk";
+import type { OpenClawConfig } from "openclaw/plugin-sdk/core";
+import type { ChannelAccountSnapshot } from "openclaw/plugin-sdk/channel-contract";
+import type { ReplyPayload } from "openclaw/plugin-sdk/reply-runtime";
+import type { RuntimeEnv } from "openclaw/plugin-sdk/runtime-env";
+import type { HistoryEntry } from "openclaw/plugin-sdk/reply-history";
 import {
-  createReplyPrefixOptions,
-  createScopedPairingAccess,
-  createTypingCallbacks,
-  logInboundDrop,
-  logTypingFailure,
   buildPendingHistoryContextFromMap,
   clearHistoryEntriesIfEnabled,
   DEFAULT_GROUP_HISTORY_LIMIT,
   recordPendingHistoryEntryIfEnabled,
-  resolveControlCommandGate,
-  resolveChannelMediaMaxBytes,
-  resolvePreferredOpenClawTmpDir,
+} from "openclaw/plugin-sdk/reply-history";
+import {
+  createReplyPrefixOptions,
+  createTypingCallbacks,
+} from "openclaw/plugin-sdk/channel-runtime";
+import { logInboundDrop } from "openclaw/plugin-sdk/channel-inbound";
+import { logTypingFailure } from "openclaw/plugin-sdk/channel-feedback";
+import { resolveControlCommandGate } from "openclaw/plugin-sdk/command-auth";
+import {
   readStoreAllowFromForDmPolicy,
   resolveDmGroupAccessWithLists,
-  type HistoryEntry,
-} from "openclaw/plugin-sdk";
+} from "openclaw/plugin-sdk/channel-policy";
+import { createChannelPairingController } from "openclaw/plugin-sdk/channel-pairing";
+import { resolveChannelMediaMaxBytes } from "openclaw/plugin-sdk/media-runtime";
+import { resolvePreferredOpenClawTmpDir } from "openclaw/plugin-sdk/infra-runtime";
 import { getZulipRuntime } from "../runtime.js";
 import { resolveZulipAccount } from "./accounts.js";
 import {
@@ -70,6 +72,7 @@ const recentInboundMessages = createDedupeCache({
   maxSize: RECENT_MESSAGE_MAX,
 });
 
+/** Supplies the runtime callbacks used by the long-lived monitor loop, defaulting to console behavior in tests. */
 function resolveRuntime(opts: MonitorZulipOpts): RuntimeEnv {
   return (
     opts.runtime ?? {
@@ -82,6 +85,7 @@ function resolveRuntime(opts: MonitorZulipOpts): RuntimeEnv {
   );
 }
 
+/** Converts Zulip-rendered HTML into plain text suitable for routing into the agent. */
 function stripHtmlToText(html: string): string {
   return html
     .replace(/<[^>]+>/g, "")
@@ -107,6 +111,7 @@ function resolveOncharPrefixes(prefixes: string[] | undefined): string[] {
   return cleaned.length > 0 ? cleaned : DEFAULT_ONCHAR_PREFIXES;
 }
 
+/** Detects and removes an on-char trigger prefix while leaving normal messages untouched. */
 function stripOncharPrefix(
   text: string,
   prefixes: string[],
@@ -180,6 +185,7 @@ function isSenderAllowed(params: {
   );
 }
 
+/** Persists inbound media to OpenClaw-managed storage so the agent can consume it safely. */
 async function saveZulipMediaBuffer(params: {
   core: ReturnType<typeof getZulipRuntime>;
   buffer: Buffer;
@@ -211,6 +217,7 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** Runs the long-lived Zulip event loop for a single account and forwards eligible events into OpenClaw sessions. */
 export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise<void> {
   const core = getZulipRuntime();
   const cfg = opts.config ?? core.config.loadConfig();
@@ -287,7 +294,7 @@ export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise
   const reactionSuccess = normalizeZulipEmojiName(reactionConfig.onSuccess ?? "check_mark");
   const reactionError = normalizeZulipEmojiName(reactionConfig.onError ?? "warning");
 
-  const pairing = createScopedPairingAccess({
+  const pairing = createChannelPairingController({
     core,
     channel: "zulip",
     accountId: account.accountId,

@@ -1,9 +1,9 @@
 import type {
   ChannelMessageActionAdapter,
   ChannelMessageActionName,
-  OpenClawConfig,
-} from "openclaw/plugin-sdk";
-import { jsonResult, readNumberParam, readStringParam } from "openclaw/plugin-sdk";
+} from "openclaw/plugin-sdk/channel-contract";
+import type { OpenClawConfig } from "openclaw/plugin-sdk/core";
+import { readNumberParam, readStringParam } from "openclaw/plugin-sdk/param-readers";
 import { resolveZulipAccount } from "./zulip/accounts.js";
 import {
   addZulipReaction,
@@ -34,7 +34,22 @@ import {
   updateZulipStream,
 } from "./zulip/client.js";
 
+
 const providerId = "zulip";
+
+/** Formats action results so shared tools and logs receive readable text plus structured details. */
+function jsonResult(details: unknown) {
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text: JSON.stringify(details, null, 2),
+      },
+    ],
+    details,
+  };
+}
+
 const MAX_STRING_LENGTH = 10000;
 const SAFE_REALM_SETTINGS = [
   "name",
@@ -54,6 +69,7 @@ type SendTarget =
   | { kind: "stream"; stream: string; topic: string }
   | { kind: "user"; email: string };
 
+/** Resolves the requested account and returns a ready-to-call Zulip API client. */
 function resolveZulipClient(cfg: OpenClawConfig, accountId?: string | null) {
   const account = resolveZulipAccount({ cfg, accountId });
   const apiKey = account.apiKey?.trim();
@@ -88,6 +104,7 @@ async function requireZulipAdmin(client: ReturnType<typeof createZulipClient>): 
   }
 }
 
+/** Parses a stream reference used by channel-management actions, optionally including a topic hint. */
 function splitStreamTarget(raw: string): StreamTarget {
   const trimmed = raw.trim();
   if (!trimmed) {
@@ -132,6 +149,7 @@ function splitStreamTarget(raw: string): StreamTarget {
   return { stream, topic: topic || undefined };
 }
 
+/** Parses the shared message-tool target syntax into either a stream delivery or a direct message. */
 function parseSendTarget(raw: string): SendTarget {
   const trimmed = raw.trim();
   if (!trimmed) {
@@ -393,13 +411,14 @@ function readRealmUpdateParams(
   return updates;
 }
 
+/** Exposes Zulip-specific capabilities through OpenClaw's shared message tool surface. */
 export const zulipMessageActions: ChannelMessageActionAdapter = {
-  listActions: ({ cfg }) => {
+  describeMessageTool: ({ cfg }: { cfg: OpenClawConfig }) => {
     const accounts = [resolveZulipAccount({ cfg })].filter((account) =>
       Boolean(account.apiKey && account.email && account.baseUrl),
     );
     if (accounts.length === 0) {
-      return [];
+      return null;
     }
     const actions = new Set<ChannelMessageActionName>([
       "send",
@@ -416,18 +435,7 @@ export const zulipMessageActions: ChannelMessageActionAdapter = {
       "pin",
       "unpin",
     ]);
-    // TODO: These actions require core SDK changes to MESSAGE_ACTION_TARGET_MODE.
-    // Re-enable once the SDK supports plugin-registered action target modes.
-    // See: https://github.com/openclaw/openclaw/issues/TBD
-    // actions.add("channel-subscribe" as ChannelMessageActionName);
-    // actions.add("invite" as ChannelMessageActionName);
-    // actions.add("resolve-topic" as ChannelMessageActionName);
-    // actions.add("user-presence" as ChannelMessageActionName);
-    // actions.add("user-deactivate" as ChannelMessageActionName);
-    // actions.add("user-reactivate" as ChannelMessageActionName);
-    // actions.add("org-settings" as ChannelMessageActionName);
-    // actions.add("org-settings-edit" as ChannelMessageActionName);
-    return Array.from(actions);
+    return { actions: Array.from(actions) };
   },
   extractToolSend: ({ args }) => {
     const action = typeof args.action === "string" ? args.action.trim() : "";
